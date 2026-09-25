@@ -1,0 +1,13 @@
+[project]
+name = "kaggle-ev"
+version = "0.1.0"
+description = "Kaggle Playground Series S6E9: predicting electric vehicle purchases"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "scikit-learn>=1.5",
+    "catboost>=1.2",
+    "matplotlib>=3.9",
+    "kaggle>=2.2.4",
+]

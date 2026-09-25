@@ -1,0 +1,13 @@
+data/
+.venv/
+__pycache__/
+*.csv
+*.parquet
+.ipynb_checkpoints/
+LEARNING_NOTES.md
+CLAUDE.md
+*.cbm
+catboost_info/
+.remember/
+.DS_Store
+oof/

@@ -1,17 +1,17 @@
 # Predicting EV Purchases — Kaggle Playground Series S6E9
 
-## Introduction
+## 🚗 Introduction
 
 This repository trains binary classifiers to predict whether a person will buy an electric vehicle (`Will_Buy_EV`) for [Kaggle's Playground Series
 Season 6, Episode 9](https://www.kaggle.com/competitions/playground-series-s6e9).
-The competition is scored by ROC AUC: how well the model *ranks* buyers
+The competition is scored by ROC AUC - how well the model ranks buyers
 above non-buyers, regardless of the exact probabilities it outputs.
 
 Best result: a single **LightGBM model**, 10-fold cross-validated, scoring
 **0.94628** on the public leaderboard (OOF 0.94616). Full results table at
 the bottom.
 
-## The data
+## 📊 The data
 
 Training data: 668,665 rows. Test data: 286,571 rows.
 No missing values in either file. Each row is one person, described by 14
@@ -26,26 +26,26 @@ columns:
 | `Number_of_Cars_Owned` | int64 | 1 – 4 | cars owned by the household |
 | `Charging_Stations_Near_Home` | int64 | 0 – 14 | count |
 | `Charging_Stations_Near_Work` | int64 | 0 – 19 | count |
-| `Environmental_Concern_Level` | float64 | 1 – 5 | self-reported concern (whole numbers, stored as float) |
+| `Environmental_Concern_Level` | float64 | 1 – 5 | self-reported concern |
 | `Gender` | string | Male, Female, Other | gender |
 | `City_Type` | string | Urban, Suburban, Rural | city type |
 | `Current_Car_Type` | string | Sedan, SUV, Hatchback, Truck | car type |
 | `Home_Charging_Possible` | string | Yes, No | |
 | `Subsidy_Available` | string | Yes, No | |
 | `Range_Anxiety_Level` | string | Low, Medium, High | ordinal |
-| `Will_Buy_EV` | string | Yes, No | **target** |
+| `Will_Buy_EV` | string | Yes, No | target |
 
-Target balance: 82.5% `No` / 17.5% `Yes`, moderately imbalanced, which is why
-ROC AUC (rank-based, not accuracy) is the right metric here.
+Target balance: 82.5% `No` / 17.5% `Yes`, moderately imbalanced, that's why
+ROC AUC is the right metric here.
 
 A second, much smaller dataset is used later in the project: a real,
 independently published 10,000-row survey of the same population that the
 competition's synthetic data was generated to resemble (see
-[Real-World Data Checks](#real-world-data-checks)).
+[Real-World Data Checks](#313-real-world-data-checks)).
 It has the same columns, with c.2% of `Annual_Income_USD` and
 `Daily_Commute_km` values missing by design.
 
-## Step 0. Preprocessing
+## 🧹 Step 0. Preprocessing
 
 Before any model sees the data, `prepare()` converts the following string columns into integers:
 
@@ -60,22 +60,22 @@ Before any model sees the data, `prepare()` converts the following string column
 They have no natural order, so forcing them into arbitrary integers would hand the
 tree a fake ordering it might split on by accident. These three stay as
 categories and go through target encoding instead (see
-[Target Encoding](#target-encoding)).
+[Target Encoding](#35-target-encoding)).
 
 Two ratio features are also computed at this stage: `Income_x_Concern`
-(income × environmental concern) and `Income_Per_Car` (income ÷ cars
+(income × environmental concern) and `Income_Per_Car` (income / cars
 owned). That are cheap interaction terms a tree would otherwise have to
 approximate with several splits.
 
-## Step 1: Exploratory data analysis
+## 🔍 Step 1: Exploratory data analysis
 
 The first pass ([explore.py](explore.py)) is a sanity check: column types, a missing-value count per column, `describe()` on the numeric columns, and the value counts of every categorical column and of the target.
 
 Result: no missing values anywhere in `train.csv` or `test.csv`, no impossible category values, no outliers or data-quality problems to clean up.
 
-## Algorithms
+## 🧠 Step 3: Algorithms
 
-### CatBoost
+### 3.1 CatBoost
 
 Gradient boosting on decision trees. Grows trees **symmetrically**: every
 leaf at a given depth splits on the same rule, so every tree in the
@@ -114,7 +114,7 @@ change was the largest hyperparameter-driven gain measured in the project
 (OOF +0.0024). Sweeping `rsm` further (0.2 / 0.3 / 0.5) after that moved
 the score by ~0.00002, inside run-to-run noise.
 
-### LightGBM
+### 3.2 LightGBM
 
 Gradient boosting on decision trees. Grows trees **leaf-wise**: at each
 step it adds a split to whichever leaf gives the largest reduction in
@@ -145,7 +145,7 @@ more/smaller trees) scored *worse* (OOF 0.94565), confirming this
 configuration, not a more aggressive one, is the better fit for this
 feature set.
 
-### Multi-Layer Perceptron (MLP)
+### 3.3 Multi-Layer Perceptron (MLP)
 
 A small feedforward neural network — layers of weighted sums and
 nonlinearities, trained by gradient descent — used as an algorithmically
@@ -163,7 +163,7 @@ Measured optimal blend weight: 0.00 — a model needs to be both decorrelated
 *and* similarly strong to help a blend; this one met only the first
 condition.
 
-### K-Fold Cross-Validation
+### 3.4 K-Fold Cross-Validation
 
 Splits the training rows into K equal parts. Trains K models, each holding
 out one part as validation and training on the remaining K-1 parts.
@@ -176,7 +176,7 @@ without spending Kaggle submissions.
 Used with K=5 for the first experiments, K=10 once the feature set was
 finalized.
 
-### Target Encoding
+### 3.5 Target Encoding
 
 Replaces a categorical value — or a numeric value turned into a category,
 e.g. income rounded to the nearest thousand — with the average target
@@ -203,7 +203,7 @@ average), so the model can pick whichever strength suits each split.
 Result: OOF 0.9461, matching the full 58-feature model using a third of
 the columns (20 vs. 58).
 
-### Digit Decomposition
+### 3.6 Digit Decomposition
 
 Splits every numeric column into its individual digits — units, tens,
 hundreds, and digits after the decimal point — one new column per digit
@@ -217,7 +217,7 @@ structure directly.
 Result: combined with artifact flags and frequency/count encoding, moved
 OOF from 0.94237 to 0.94366.
 
-### Artifact Flags
+### 3.7 Artifact Flags
 
 Binary flags marking specific value ranges identified by plotting the full
 income and environmental-concern distributions (not visible in
@@ -234,7 +234,7 @@ These are sharp discontinuities in density that do not occur in a natural
 population — consistent with a synthetic generator clipping or
 special-casing values at fixed boundaries.
 
-### Frequency / Count Encoding
+### 3.8 Frequency / Count Encoding
 
 For each target-encoded column, adds two more columns: how often that
 value occurs in the combined train+test pool, as a proportion (`_fe`) and
@@ -242,7 +242,7 @@ as a raw count (`_cnt`). Computed once from train+test without touching
 the target, so it is safe to compute outside the fold loop (no leakage
 risk).
 
-### Neighbourhood Window Encoding
+### 3.9 Neighbourhood Window Encoding
 
 Replaces fixed-bucket target encoding on a continuous column (income,
 commute) with a smoothed local average: the mean target value of every row
@@ -256,7 +256,7 @@ with few neighbours.
 Result: OOF 0.94617, identical to the base LightGBM model without it.
 Public LB 0.94626.
 
-### Joint (Interaction) Target Encoding
+### 3.10 Joint (Interaction) Target Encoding
 
 Target-encodes a **combination** of columns as a single joint string key,
 instead of encoding each column separately — e.g.
@@ -268,7 +268,7 @@ decision): two pairwise keys plus the full three-way key.
 Result: OOF 0.94616 (base LightGBM model + 3 joint keys) — no OOF
 improvement over the base model. Public LB 0.94628.
 
-### Rank Blending (Ensembling)
+### 3.11 Rank Blending (Ensembling)
 
 Converts each model's predictions to their **rank** (position if sorted,
 scaled to [0, 1]) before averaging, instead of averaging raw
@@ -282,7 +282,7 @@ training labels, before any submission is spent.
 | CatBoost + LightGBM | 30% / 70% | 0.94620 | 0.94621 |
 | CatBoost + LightGBM + LightGBM(te) + LightGBM(te+org-mean) | 25% / 40% / 10% / 25% | 0.94623 | — |
 
-### Feature Views
+### 3.12 Feature Views
 
 Trains the same LightGBM configuration on three different column sets, to
 test whether changing the *input columns* (rather than the algorithm)
@@ -298,7 +298,7 @@ Spearman correlation, `full` vs. `te`: 0.998 — despite having almost no
 columns in common, more correlated than CatBoost and LightGBM were with
 each other on identical columns.
 
-### Real-World Data Checks
+### 3.13 Real-World Data Checks
 
 Three ways of using the original, non-synthetic 10,000-row dataset (see
 [The data](#the-data)):
@@ -309,7 +309,7 @@ Three ways of using the original, non-synthetic 10,000-row dataset (see
 | Row-level matching | Searches for exact/near-exact matches between the 955,236 competition rows and the 10,000 real rows | 0 exact matches; near-matches at chance level only |
 | Row concatenation | Adds a 10-fold split of the real rows (≈9,000/fold) into each fold's *training* set only, never validation | OOF 0.94609 vs. 0.94617 without it — no improvement |
 
-### The Ceiling
+### 3.14 The Ceiling
 
 Grouping rows by their four most predictive features finds a group of
 ~5,000 people, identical on those features, splitting 88.1% buy / 11.9%
@@ -318,7 +318,7 @@ algorithm and feature combination tested in this project converges to OOF
 ≈ 0.9461–0.9463: each is estimating the same underlying rate, and the
 remaining error at that point is largely irreducible.
 
-## Repository structure
+## 📁 Repository structure
 
 ```
 prepare.py              shared feature-preparation function, used by the local scripts below
@@ -348,33 +348,63 @@ LightGBM) — the `notebooks/` scripts are the versions pasted there. Local
 work only needs `uv sync` and `uv run python <script>.py`; nothing here
 requires a GPU.
 
-## Results
+## 🏆 Results
 
-| Step | Model | Features | OOF AUC | Public LB |
-|---|---|---:|---:|---:|
-| 1 | CatBoost, single 80/20 split, depth=4 | 15 | 0.94178 | 0.94158 |
-| 2 | CatBoost, 5-fold CV, depth=4 | 15 | 0.94205 | 0.94192 |
-| 3 | CatBoost, 5-fold CV + target encoding | 21 | 0.94237 | — |
-| 4 | CatBoost, 5-fold CV + digit features + artifact flags + frequency/count encoding | 52 | 0.94366 | 0.94373 |
-| 5 | CatBoost, 10-fold CV, tuned (depth=6, rsm=0.3) | 58 | 0.94609 | 0.94606 |
-| 6 | **LightGBM, 10-fold CV, same 58 features** | 58 | **0.94617** | **0.94624** |
-| 7 | Rank blend: 30% CatBoost (step 5) + 70% LightGBM (step 6) | 58 | 0.94620 | 0.94621 |
-| 8 | LightGBM, "te" view: triple target encoding, no digits/flags | 20 | 0.94607–0.94610 | — |
-| 9 | LightGBM, "raw" view: 14 original columns + 2 ratios | 15 | 0.94328 | — |
-| 10 | LightGBM, "te" view + real-dataset category averages | 33 | 0.94608 | — |
-| 11 | Rank blend: CatBoost + LightGBM (steps 5, 6, 8, 10) | — | 0.94623 | — |
-| 12 | LightGBM, step 6 + income/commute neighbourhood-window encoding | 60 | 0.94617 | 0.94626 |
-| 13 | **LightGBM, step 6 + joint target encoding of the three attitude columns** | 67 | 0.94616 | **0.94628** |
-| 14 | LightGBM, step 6 + original dataset rows concatenated into training | 58 | 0.94609 | 0.94616 |
+| Model | Features | OOF AUC | Public LB |
+|---|---:|---:|---:|
+| CatBoost, single 80/20 split, depth=4 | 15 | 0.94178 | 0.94158 |
+| CatBoost, 5-fold CV, depth=4 | 15 | 0.94205 | 0.94192 |
+| CatBoost, 5-fold CV + target encoding | 21 | 0.94237 | — |
+| CatBoost, 5-fold CV + digit features + artifact flags + frequency/count encoding | 52 | 0.94366 | 0.94373 |
+| CatBoost, 10-fold CV, tuned (depth=6, rsm=0.3) | 58 | 0.94609 | 0.94606 |
+| **LightGBM, 10-fold CV, same 58 features** | 58 | **0.94617** | **0.94624** |
+| Rank blend: 30% CatBoost (step 5) + 70% LightGBM (step 6) | 58 | 0.94620 | 0.94621 |
+| LightGBM, "te" view: triple target encoding, no digits/flags | 20 | 0.94607–0.94610 | — |
+| LightGBM, "raw" view: 14 original columns + 2 ratios | 15 | 0.94328 | — |
+| LightGBM, "te" view + real-dataset category averages | 33 | 0.94608 | — |
+| Rank blend: CatBoost + LightGBM (steps 5, 6, 8, 10) | — | 0.94623 | — |
+| LightGBM, step 6 + income/commute neighbourhood-window encoding | 60 | 0.94617 | 0.94626 |
+| **LightGBM, step 6 + joint target encoding of the three attitude columns** | 67 | 0.94616 | **0.94628** |
+| LightGBM, step 6 + original dataset rows concatenated into training | 58 | 0.94609 | 0.94616 |
 
-Step 13 is the best public result to date, and it makes the case for
-treating these last few thousandths as noise rather than progress: its OOF
-score (0.94616) is the *lowest* of steps 6, 12 and 13, yet its public score
-is the *highest*. Combined with step 7's blend, which scored lower publicly
-than a higher-OOF model, the pattern is consistent — OOF and the public
-split disagree on the ranking of these near-identical models, which is
-exactly what "within measurement noise" means in practice. Steps 8-14 were
-run to test whether a different view of the features, an outside data
-source, or a specific idea borrowed from a stronger public result could
-break past the ceiling described above; none moved the OOF score outside
-of measurement noise, confirming rather than breaking it.
+## ✅ Conclusions
+
+The best public score in this project — **0.94628** — came from LightGBM
+with joint target encoding of the three attitude columns, and it makes an
+honest case against reading too much into the last few thousandths of a
+point: that entry's OOF score (0.94616) is actually the *lowest* of the
+three LightGBM variants compared in the results table, yet its public
+score is the *highest*. The rank-blend of CatBoost and LightGBM shows the
+same pattern in reverse — a slightly higher OOF than plain LightGBM, but a
+slightly *lower* public score. OOF and the public leaderboard disagree on
+the ranking of these near-identical models, which is exactly what "these
+differences are inside measurement noise" looks like in practice, not a
+caveat to explain away.
+
+A few things stand out from the full run of experiments:
+
+- **Reading the data mattered more than choosing a model.** The single
+  biggest jump in the project (OOF 0.94237 → 0.94366) came from noticing
+  the generator's own fingerprints — the $30K income spike, the dead zone,
+  the digit-level rounding artifacts — not from switching algorithms.
+- **CatBoost and LightGBM converged on almost the same answer.** Given the
+  same 58 columns, the two libraries correlate at 0.997 — different growth
+  strategies (symmetric vs. leaf-wise trees), same conclusions. Blending
+  them gained +0.00003 OOF, essentially nothing.
+- **Every attempt to find one more genuinely new source of signal came back
+  empty**, and by a wide and varied margin of technique: alternate feature
+  views, real-world per-category averages, exact row matching, real rows
+  concatenated into training, neighbourhood window encoding, and joint
+  interaction encoding. None of these moved OOF outside of noise, in
+  either direction.
+- **That ceiling is measurable, not assumed.** Rows identical on the four
+  strongest features still split 88.1% / 11.9% on the actual outcome — a
+  gap nothing in this project's data, features, or models can close,
+  because it is noise built into how the labels were generated, not a
+  pattern waiting to be found.
+
+Taken together: this project reached the practical ceiling for this
+feature set and these two model families. The remaining gap to the very
+top of the public leaderboard is more likely explained by a fundamentally
+different source of information (or by leaderboard-split luck) than by
+another round of feature engineering on the same columns.

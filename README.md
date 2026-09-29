@@ -41,7 +41,7 @@ ROC AUC is the right metric here.
 A second, much smaller dataset is used later in the project: a real,
 independently published 10,000-row survey of the same population that the
 competition's synthetic data was generated to resemble (see
-[Real-World Data Checks](#313-real-world-data-checks)).
+[Real-World Data Checks](#314-real-world-data-checks)).
 It has the same columns, with c.2% of `Annual_Income_USD` and
 `Daily_Commute_km` values missing by design.
 
@@ -60,7 +60,7 @@ Before any model sees the data, `prepare()` converts the following string column
 They have no natural order, so forcing them into arbitrary integers would hand the
 tree a fake ordering it might split on by accident. These three stay as
 categories and go through target encoding instead (see
-[Target Encoding](#35-target-encoding)).
+[Target Encoding](#36-target-encoding)).
 
 Two ratio features are also computed at this stage: `Income_x_Concern`
 (income × environmental concern) and `Income_Per_Car` (income / cars
@@ -163,7 +163,30 @@ Measured optimal blend weight: 0.00 — a model needs to be both decorrelated
 *and* similarly strong to help a blend; this one met only the first
 condition.
 
-### 3.4 K-Fold Cross-Validation
+### 3.4 Logistic Regression
+
+A linear model: fits one weight per feature and passes their weighted sum
+through a sigmoid to produce a probability. No trees, no splits — the
+decision boundary is a single hyperplane in feature space. Run locally
+(fast enough not to need Kaggle's compute) on the exact same 58-feature
+`full` view as CatBoost/LightGBM, with the target-encoded columns scaled
+(`StandardScaler`, fit per fold like the encoder).
+
+| Parameter | Value |
+|---|---|
+| `max_iter` | 2000 |
+| `random_state` | 42 |
+
+Result: OOF 0.94412 — clearly below CatBoost/LightGBM (0.9461+), but far
+above the standalone recovered generator formula in
+[Real-World Data Checks](#314-real-world-data-checks) (AUC 0.938),
+showing that the hand-engineered features (digits, target encoding,
+artifact flags) already linearize most of the underlying relationship.
+Spearman correlation with LightGBM: 0.9875 (similar to the MLP), but
+0.002 weaker in AUC (a larger gap than the MLP's 0.0017) — same outcome as
+the MLP: measured optimal blend weight ≈ 0.
+
+### 3.5 K-Fold Cross-Validation
 
 Splits the training rows into K equal parts. Trains K models, each holding
 out one part as validation and training on the remaining K-1 parts.
@@ -176,7 +199,7 @@ without spending Kaggle submissions.
 Used with K=5 for the first experiments, K=10 once the feature set was
 finalized.
 
-### 3.5 Target Encoding
+### 3.6 Target Encoding
 
 Replaces a categorical value — or a numeric value turned into a category,
 e.g. income rounded to the nearest thousand — with the average target
@@ -203,7 +226,7 @@ average), so the model can pick whichever strength suits each split.
 Result: OOF 0.9461, matching the full 58-feature model using a third of
 the columns (20 vs. 58).
 
-### 3.6 Digit Decomposition
+### 3.7 Digit Decomposition
 
 Splits every numeric column into its individual digits — units, tens,
 hundreds, and digits after the decimal point — one new column per digit
@@ -217,7 +240,7 @@ structure directly.
 Result: combined with artifact flags and frequency/count encoding, moved
 OOF from 0.94237 to 0.94366.
 
-### 3.7 Artifact Flags
+### 3.8 Artifact Flags
 
 Binary flags marking specific value ranges identified by plotting the full
 income and environmental-concern distributions (not visible in
@@ -234,7 +257,7 @@ These are sharp discontinuities in density that do not occur in a natural
 population — consistent with a synthetic generator clipping or
 special-casing values at fixed boundaries.
 
-### 3.8 Frequency / Count Encoding
+### 3.9 Frequency / Count Encoding
 
 For each target-encoded column, adds two more columns: how often that
 value occurs in the combined train+test pool, as a proportion (`_fe`) and
@@ -242,7 +265,7 @@ as a raw count (`_cnt`). Computed once from train+test without touching
 the target, so it is safe to compute outside the fold loop (no leakage
 risk).
 
-### 3.9 Neighbourhood Window Encoding
+### 3.10 Neighbourhood Window Encoding
 
 Replaces fixed-bucket target encoding on a continuous column (income,
 commute) with a smoothed local average: the mean target value of every row
@@ -256,7 +279,7 @@ with few neighbours.
 Result: OOF 0.94617, identical to the base LightGBM model without it.
 Public LB 0.94626.
 
-### 3.10 Joint (Interaction) Target Encoding
+### 3.11 Joint (Interaction) Target Encoding
 
 Target-encodes a **combination** of columns as a single joint string key,
 instead of encoding each column separately — e.g.
@@ -268,7 +291,7 @@ decision): two pairwise keys plus the full three-way key.
 Result: OOF 0.94616 (base LightGBM model + 3 joint keys) — no OOF
 improvement over the base model. Public LB 0.94628.
 
-### 3.11 Rank Blending (Ensembling)
+### 3.12 Rank Blending (Ensembling)
 
 Converts each model's predictions to their **rank** (position if sorted,
 scaled to [0, 1]) before averaging, instead of averaging raw
@@ -282,7 +305,7 @@ training labels, before any submission is spent.
 | CatBoost + LightGBM | 30% / 70% | 0.94620 | 0.94621 |
 | CatBoost + LightGBM + LightGBM(te) + LightGBM(te+org-mean) | 25% / 40% / 10% / 25% | 0.94623 | — |
 
-### 3.12 Feature Views
+### 3.13 Feature Views
 
 Trains the same LightGBM configuration on three different column sets, to
 test whether changing the *input columns* (rather than the algorithm)
@@ -298,7 +321,7 @@ Spearman correlation, `full` vs. `te`: 0.998 — despite having almost no
 columns in common, more correlated than CatBoost and LightGBM were with
 each other on identical columns.
 
-### 3.13 Real-World Data Checks
+### 3.14 Real-World Data Checks
 
 Three ways of using the original, non-synthetic 10,000-row dataset (see
 [The data](#the-data)):
@@ -308,8 +331,9 @@ Three ways of using the original, non-synthetic 10,000-row dataset (see
 | Per-category averages | Maps each column's real-world buy rate onto train/test as a feature | OOF 0.94608 vs. 0.94607 without it — no measurable effect |
 | Row-level matching | Searches for exact/near-exact matches between the 955,236 competition rows and the 10,000 real rows | 0 exact matches; near-matches at chance level only |
 | Row concatenation | Adds a 10-fold split of the real rows (≈9,000/fold) into each fold's *training* set only, never validation | OOF 0.94609 vs. 0.94617 without it — no improvement |
+| Recovered generator formula | Recomputes a published reconstruction of the competition's buy-decision formula (`1.2×income/100k + 0.6×concern + 2×subsidy − 1×medium_anxiety − 3×high_anxiety`, threshold 5.5) directly on the synthetic columns, with no training at all | AUC 0.938 alone; blend weight ≈ 0 on top of LightGBM |
 
-### 3.14 The Ceiling
+### 3.15 The Ceiling
 
 Grouping rows by their four most predictive features finds a group of
 ~5,000 people, identical on those features, splitting 88.1% buy / 11.9%
@@ -326,6 +350,7 @@ explore.py              Step 1: EDA — column types, missing values, target bal
 train.py                first model: a single 80/20 train/validation split
 train_cv.py             upgrades train.py to 5-fold cross-validation
 train_cv_te.py          adds target encoding on top of train_cv.py
+train_logreg.py         logistic regression on the same 58-feature view as LightGBM
 predict.py              loads a saved model and writes a submission file
 blend.py                rank-blends two or more finished submission CSVs
 find_blend_weights.py   sweeps blend weights against out-of-fold predictions

@@ -303,7 +303,13 @@ training labels, before any submission is spent.
 | Blend | Weights | OOF AUC | Public LB |
 |---|---|---|---|
 | CatBoost + LightGBM | 30% / 70% | 0.94620 | 0.94621 |
+| CatBoost + LightGBM + LightGBM(te) | 30% / 45% / 25% | 0.946225 | — |
 | CatBoost + LightGBM + LightGBM(te) + LightGBM(te+org-mean) | 25% / 40% / 10% / 25% | 0.94623 | — |
+
+The first blend's weight (30/70) was chosen from a wider sweep (0.5/0.5 and
+0.35/0.65 were tried first, both inside noise of each other and of 30/70)
+— the leftover CSVs for those earlier weights are in
+`submissions/blend/`, kept for the record but not separate results.
 
 ### 3.13 Feature Views
 
@@ -383,11 +389,12 @@ requires a GPU.
 | CatBoost, 5-fold CV + digit features + artifact flags + frequency/count encoding | 52 | 0.94366 | 0.94373 |
 | CatBoost, 10-fold CV, tuned (depth=6, rsm=0.3) | 58 | 0.94609 | 0.94606 |
 | **LightGBM, 10-fold CV, same 58 features** | 58 | **0.94617** | **0.94624** |
-| Rank blend: 30% CatBoost (step 5) + 70% LightGBM (step 6) | 58 | 0.94620 | 0.94621 |
+| Rank blend: 30% CatBoost + 70% LightGBM | 58 | 0.94620 | 0.94621 |
 | LightGBM, "te" view: triple target encoding, no digits/flags | 20 | 0.94607–0.94610 | — |
 | LightGBM, "raw" view: 14 original columns + 2 ratios | 15 | 0.94328 | — |
 | LightGBM, "te" view + real-dataset category averages | 33 | 0.94608 | — |
-| Rank blend: CatBoost + LightGBM (steps 5, 6, 8, 10) | — | 0.94623 | — |
+| Rank blend: CatBoost + LightGBM + LightGBM(te) | — | 0.946225 | — |
+| Rank blend: CatBoost + LightGBM + LightGBM(te) + LightGBM(te+org-mean) | — | 0.94623 | — |
 | LightGBM, step 6 + income/commute neighbourhood-window encoding | 60 | 0.94617 | 0.94626 |
 | **LightGBM, step 6 + joint target encoding of the three attitude columns** | 67 | 0.94616 | **0.94628** |
 | LightGBM, step 6 + original dataset rows concatenated into training | 58 | 0.94609 | 0.94616 |

@@ -246,6 +246,8 @@ Binary flags marking specific value ranges identified by plotting the full
 income and environmental-concern distributions (not visible in
 `describe()`'s summary statistics):
 
+![Income distribution showing the generator's fingerprints](assets/income_artifacts.png)
+
 | Flag | Condition |
 |---|---|
 | `is_30k_spike` | `Annual_Income_USD == 30000` |
@@ -311,6 +313,18 @@ The first blend's weight (30/70) was chosen from a wider sweep (0.5/0.5 and
 — the leftover CSVs for those earlier weights are in
 `submissions/blend/`, kept for the record but not separate results.
 
+The blends struggle for a visible reason: every model here, tree-based or
+not, ranks people almost identically.
+
+![Spearman correlation heatmap between six models' OOF predictions](assets/model_correlation.png)
+
+The tree models (CatBoost, the three LightGBM views) sit at 0.997-0.999
+correlation with each other regardless of which columns they were trained
+on. MLP and Logistic Regression pull that down only to ~0.984-0.989 — a
+small decorrelation gain, and in both cases not enough to offset how much
+weaker they are (see [3.3](#33-multi-layer-perceptron-mlp) and
+[3.4](#34-logistic-regression)).
+
 ### 3.13 Feature Views
 
 Trains the same LightGBM configuration on three different column sets, to
@@ -357,6 +371,8 @@ train.py                first model: a single 80/20 train/validation split
 train_cv.py             upgrades train.py to 5-fold cross-validation
 train_cv_te.py          adds target encoding on top of train_cv.py
 train_logreg.py         logistic regression on the same 58-feature view as LightGBM
+make_charts.py          generates the charts in assets/, used in this README
+assets/                 charts embedded above
 predict.py              loads a saved model and writes a submission file
 blend.py                rank-blends two or more finished submission CSVs
 find_blend_weights.py   sweeps blend weights against out-of-fold predictions
@@ -398,6 +414,8 @@ requires a GPU.
 | LightGBM, step 6 + income/commute neighbourhood-window encoding | 60 | 0.94617 | 0.94626 |
 | **LightGBM, step 6 + joint target encoding of the three attitude columns** | 67 | 0.94616 | **0.94628** |
 | LightGBM, step 6 + original dataset rows concatenated into training | 58 | 0.94609 | 0.94616 |
+
+![OOF AUC across every step of the project, showing the climb to a ceiling around 0.9461-0.9463](assets/score_progression.png)
 
 ## ✅ Conclusions
 

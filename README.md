@@ -555,7 +555,7 @@ stacking over a hundred models with a formal pre-registration process.
 That is a different kind of project from a solo effort on a laptop without
 a GPU — not a harder version of the same one.
 
-## License
+## 📄 License
 
 Copyright © 2026 Olga Aksenova.
 

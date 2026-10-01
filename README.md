@@ -458,3 +458,99 @@ feature set and these two model families. The remaining gap to the very
 top of the public leaderboard is more likely explained by a fundamentally
 different source of information (or by leaderboard-split luck) than by
 another round of feature engineering on the same columns.
+
+## 🏁 Postscript: what the winners did differently
+
+The competition closed on September 30, 2026. Final standings are scored
+on a private 80% holdout of the test set, separate from the public score
+shown during the competition — and the private leaderboard reordered the
+field, including at the very top.
+
+### The public #1 did not hold
+
+The team that led the public leaderboard for most of the competition
+(0.94945, 0.0027 clear of 2nd place — an unusually large gap on this
+leaderboard) finished **2nd on the private leaderboard at 0.94588**, behind
+Chris Deotte's 0.94602. Their own solution writeup explains why: that
+0.94945 file was a deliberate experiment in estimating the public test
+set's labels from publicly shared, scored submission files, and tilting
+predictions toward that estimate. The same file scored **0.94313 on the
+private leaderboard** — worse than roughly 1,645 other teams. They
+identified this themselves, excluded that file from their two official
+final submissions, and placed 2nd with honestly validated models instead.
+
+This matches, with real numbers, something this project could previously
+only call a guess: the unexplained gap to the public #1 was not a
+modeling insight. It was public-leaderboard overfitting, and it collapsed
+exactly the way overfitting collapses once scored on unseen data.
+
+### What separated the actual top finishers
+
+Reading the 2nd and 3rd place solution writeups, the gap to this project's
+ceiling (~0.9461-0.9463 OOF) is not one clever feature — every one of the
+targeted ideas tested in [3.10](#310-neighbourhood-window-encoding), [3.11](#311-joint-interaction-target-encoding),
+and [3.14](#314-real-world-data-checks) has an analogue in their writeups too,
+and none of them was the deciding factor for them either. What they had
+instead:
+
+- **TabPFN** — a pretrained tabular foundation model used as the primary
+  classifier, given the *entire* labelled training set (up to ~668,665
+  rows) as in-context input rather than being fit with gradient descent on
+  this dataset specifically. Their own ablation shows AUC still climbing
+  with no sign of saturating as context size grew — a capability neither
+  CatBoost nor LightGBM has an equivalent of, and one that needs tens of
+  GB of GPU memory per fold.
+- **LLM-derived features.** A small language model (`distilgpt2`)
+  fine-tuned only on the 10,000 real rows produced a log-likelihood-ratio
+  feature — how plausible a row's combination of values is as a "bought"
+  story versus a "didn't buy" story — fed into TabPFN as one more column
+  alongside the engineered ones.
+- **Tokenizing numbers as text.** Motivated by a forum theory that the
+  generator emits numbers as LLM tokens, both top teams extracted GPT-2
+  byte-pair-encoding token features from the income and commute values'
+  *string* representation — a different granularity of the same idea
+  behind this project's digit decomposition.
+- **A formal statistics discipline**: every candidate feature or model had
+  to beat a minimum effect size *and* a minimum number of standard errors
+  across folds, checked against a same-width random-permutation placebo
+  run alongside it, with experiments logged before their results were
+  known. This is the same judgment this project applied by hand throughout
+  (±0.00002 being noise, a flat top-5 blend sweep being a non-result) ,
+  formalized into a pre-registered protocol.
+- **Ensembling at a different scale.** 3rd place's final submission was a
+  logistic-regression stack over **115 prediction columns** from a dozen
+  model families (XGBoost, LightGBM, RealMLP, TabM, transformer-based
+  tabular models, and more) — logistic regression used as a *meta-model*
+  over many diverse predictions, not as a standalone competitor to them
+  (compare [3.4](#34-logistic-regression) in this project, where it was
+  tested alone).
+
+### Independent confirmation of this project's own null results
+
+Both writeups independently ran into findings this project already
+documented:
+
+- **Concatenating the original dataset's rows into training did not
+  help them either** — 3rd place's writeup states this explicitly, which
+  matches [3.14](#314-real-world-data-checks)'s own result almost exactly
+  (OOF 0.94609 vs. 0.94617 without it).
+- **Multi-resolution target encoding of income was their single most
+  effective classical feature-engineering lever** — the same conclusion
+  this project reached in [3.6](#36-target-encoding) and [3.7](#37-digit-decomposition).
+- **The public leaderboard is a weak, overfittable signal relative to
+  proper cross-validation** — 2nd place measured their nested-CV gain
+  correlating with private rank at Spearman 0.991, versus only 0.793 for
+  the public score. This is the same pattern behind this project's own
+  observation that OOF and public LB disagreed on the ranking of several
+  near-identical models (see the chart above, and step 7's blend scoring
+  lower publicly than a higher-OOF model).
+
+### What it would take to close the gap
+
+Not more feature engineering on these 58 columns — that door is reasonably
+well-explored in this project and in theirs. The actual gap is
+infrastructure and scale: GPU-hours and a licensed foundation-model
+checkpoint (TabPFN), a fine-tuned LLM, and a 2-3 person team running and
+stacking over a hundred models with a formal pre-registration process.
+That is a different kind of project from a solo effort on a laptop without
+a GPU — not a harder version of the same one.

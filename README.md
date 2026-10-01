@@ -554,3 +554,10 @@ checkpoint (TabPFN), a fine-tuned LLM, and a 2-3 person team running and
 stacking over a hundred models with a formal pre-registration process.
 That is a different kind of project from a solo effort on a laptop without
 a GPU — not a harder version of the same one.
+
+## License
+
+Copyright © 2026 Olga Aksenova.
+
+The code in this repository is licensed under the **[Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)** – see
+[LICENSE](LICENSE) for the full text.
